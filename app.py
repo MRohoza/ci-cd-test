@@ -7,4 +7,4 @@ while True:
         f"{datetime.now(timezone.utc).isoformat()}",
         flush=True,
     )
-    time.sleep(10)
+    time.sleep(15)
