@@ -1,5 +1,5 @@
 
-name: Python CI
+name: Python CI and ECR Push
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  test-and-build:
+  test-build-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,8 +26,53 @@ jobs:
       - name: Check Python syntax
         run: python -m py_compile app.py
 
+      - name: Run tests
+        run: |
+          if [ -f requirements-dev.txt ]; then
+            python -m pip install -r requirements-dev.txt
+          fi
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
+          if [ -d tests ]; then
+            python -m pytest tests/
+          else
+            echo "No tests directory found; skipping pytest."
+          fi
+
       - name: Build Docker image
         run: docker build -t python-demo:${{ github.sha }} .
 
-      - name: Verify image exists
-        run: docker image inspect python-demo:${{ github.sha }}
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        if: github.event_name == 'push'
+        run: |
+          aws ecr get-login-password --region "${{ vars.AWS_REGION }}" |
+            docker login \
+              --username AWS \
+              --password-stdin \
+              "${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
+
+      - name: Tag and push image
+        if: github.event_name == 'push'
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          IMAGE="${REGISTRY}/${ECR_REPOSITORY}"
+
+          docker tag "python-demo:${IMAGE_TAG}" "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:${IMAGE_TAG}"
+
+          docker tag "python-demo:${IMAGE_TAG}" "${IMAGE}:latest"
+          docker push "${IMAGE}:latest"
