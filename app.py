@@ -1,10 +1,13 @@
 import time
 from datetime import datetime, timezone
+from utils.utils import format_message
 
-while True:
-    print(
-        f"Python app is running: "
-        f"{datetime.now(timezone.utc).isoformat()}",
-        flush=True,
-    )
-    time.sleep(15)
+
+def main():
+    while True:
+        print(format_message(datetime.now(timezone.utc)), flush=True)
+        time.sleep(10)
+
+
+if __name__ == "__main__":
+    main()
