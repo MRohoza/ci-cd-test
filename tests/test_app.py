@@ -6,4 +6,4 @@ def test_format_message():
 
     result = format_message(now)
 
-    assert result == "Python app is running: 2025-01-15T12:30:00+00:00"
+    assert result == "Python app is running: 2026-01-15T12:30:00+00:00"
