@@ -6,7 +6,7 @@ from utils.utils import format_message
 def main():
     while True:
         print(format_message(datetime.now(timezone.utc)), flush=True)
-        time.sleep(11)
+        time.sleep(15)
 
 
 if __name__ == "__main__":
